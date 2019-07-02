@@ -27,19 +27,16 @@ import functools
 import json
 
 from six.moves import queue
-
 import tensorflow as tf
+from tensorflow.python import debug as tf_debug
+from tensorflow.core.debug import debug_service_pb2
+from tensorflow.python.debug.lib import grpc_debug_server
+
 from tensorboard.plugins.debugger import comm_channel as comm_channel_lib
 from tensorboard.plugins.debugger import debug_graphs_helper
 from tensorboard.plugins.debugger import tensor_helper
 from tensorboard.plugins.debugger import tensor_store as tensor_store_lib
-from tensorboard.util import tb_logging
-from tensorflow.core.debug import debug_service_pb2
-from tensorflow.python import debug as tf_debug
-from tensorflow.python.debug.lib import debug_data
-from tensorflow.python.debug.lib import grpc_debug_server
 
-logger = tb_logging.get_logger()
 
 RunKey = collections.namedtuple(
     'RunKey', ['input_names', 'output_names', 'target_nodes'])
@@ -62,13 +59,6 @@ def _comm_metadata(run_key, timestamp):
   }
 
 
-UNINITIALIZED_TAG = 'Uninitialized'
-UNSUPPORTED_TAG = 'Unsupported'
-NA_TAG = 'N/A'
-
-STRING_ELEMENT_MAX_LEN = 40
-
-
 def _comm_tensor_data(device_name,
                       node_name,
                       maybe_base_expanded_node_name,
@@ -77,15 +67,6 @@ def _comm_tensor_data(device_name,
                       tensor_value,
                       wall_time):
   """Create a dict() as the outgoing data in the tensor data comm route.
-
-  Note: The tensor data in the comm route does not include the value of the
-  tensor in its entirety in general. Only if a tensor satisfies the following
-  conditions will its entire value be included in the return value of this
-  method:
-  1. Has a numeric data type (e.g., float32, int32) and has fewer than 5
-     elements.
-  2. Is a string tensor and has fewer than 5 elements. Each string element is
-     up to 40 bytes.
 
   Args:
     device_name: Name of the device that the tensor is on.
@@ -100,30 +81,17 @@ def _comm_tensor_data(device_name,
     A dict representing the tensor data.
   """
   output_slot = int(output_slot)
-  logger.info(
+  tf.logging.info(
       'Recording tensor value: %s, %d, %s', node_name, output_slot, debug_op)
-  tensor_values = None
-  if isinstance(tensor_value, debug_data.InconvertibleTensorProto):
-    if not tensor_value.initialized:
-      tensor_dtype = UNINITIALIZED_TAG
-      tensor_shape = UNINITIALIZED_TAG
-    else:
-      tensor_dtype = UNSUPPORTED_TAG
-      tensor_shape = UNSUPPORTED_TAG
-    tensor_values = NA_TAG
+  tensor_dtype = str(tensor_value.dtype)
+  tensor_shape = tensor_value.shape
+  # The /comm endpoint should respond with tensor values only if the tensor is
+  # small enough. Otherwise, the detailed values sould be queried through a
+  # dedicated tensor_data that supports slicing.
+  if tensor_helper.numel(tensor_shape) < 5:
+    _, _, tensor_values = tensor_helper.array_view(tensor_value)
   else:
-    tensor_dtype = tensor_helper.translate_dtype(tensor_value.dtype)
-    tensor_shape = tensor_value.shape
-
-    # The /comm endpoint should respond with tensor values only if the tensor is
-    # small enough. Otherwise, the detailed values sould be queried through a
-    # dedicated tensor_data that supports slicing.
-    if tensor_helper.numel(tensor_shape) < 5:
-      _, _, tensor_values = tensor_helper.array_view(tensor_value)
-      if tensor_dtype == 'string' and tensor_value is not None:
-        tensor_values = tensor_helper.process_buffers_for_display(
-            tensor_values, limit=STRING_ELEMENT_MAX_LEN)
-
+    tensor_values = None
   return {
       'type': 'tensor',
       'timestamp': wall_time,
@@ -306,11 +274,9 @@ class InteractiveDebuggerDataStreamHandler(
     self._outgoing_channel.put(_comm_metadata(self._run_key, event.wall_time))
 
     # Wait for acknowledgement from client. Blocks until an item is got.
-    logger.info('on_core_metadata_event() waiting for client ack (meta)...')
+    tf.logging.info('on_core_metadata_event() waiting for client ack (meta)...')
     self._incoming_channel.get()
-    logger.info('on_core_metadata_event() client ack received (meta).')
-
-    # TODO(cais): If eager mode, this should return something to yield.
+    tf.logging.info('on_core_metadata_event() client ack received (meta).')
 
   def _add_graph_def(self, device_name, graph_def):
     self._run_states.add_graph(
@@ -353,13 +319,13 @@ class InteractiveDebuggerDataStreamHandler(
       event: The Event proto to be processed.
     """
     if not event.summary.value:
-      logger.info('The summary of the event lacks a value.')
+      tf.logging.info('The summary of the event lacks a value.')
       return None
 
     # The node name property in the event proto is actually a watch key, which
     # is a concatenation of several pieces of data.
     watch_key = event.summary.value[0].node_name
-    tensor_value = debug_data.load_tensor_from_event(event)
+    tensor_value = tf.make_ndarray(event.summary.value[0].tensor)
     device_name = _extract_device_name_from_event(event)
     node_name, output_slot, debug_op = (
         event.summary.value[0].node_name.split(':'))
@@ -372,14 +338,14 @@ class InteractiveDebuggerDataStreamHandler(
         device_name, node_name, maybe_base_expanded_node_name, output_slot,
         debug_op, tensor_value, event.wall_time))
 
-    logger.info('on_value_event(): waiting for client ack (tensors)...')
+    tf.logging.info('on_value_event(): waiting for client ack (tensors)...')
     self._incoming_channel.get()
-    logger.info('on_value_event(): client ack received (tensor).')
+    tf.logging.info('on_value_event(): client ack received (tensor).')
 
     # Determine if the particular debug watch key is in the current list of
     # breakpoints. If it is, send an EventReply() to unblock the debug op.
     if self._is_debug_node_in_breakpoints(event.summary.value[0].node_name):
-      logger.info('Sending empty EventReply for breakpoint: %s',
+      tf.logging.info('Sending empty EventReply for breakpoint: %s',
                       event.summary.value[0].node_name)
       # TODO(cais): Support receiving and sending tensor value from front-end.
       return debug_service_pb2.EventReply()
@@ -428,7 +394,7 @@ class SourceManager(object):
 
   def get_paths(self):
     """Get the paths to all available source files."""
-    return list(self._source_file_content.keys())
+    return self._source_file_content.keys()
 
   def get_content(self, file_path):
     """Get the content of a source file.
@@ -532,6 +498,15 @@ class InteractiveDebuggerDataServer(
         self._tensor_store)
     grpc_debug_server.EventListenerBaseServicer.__init__(
         self, receive_port, curried_handler_constructor)
+
+  def start_the_debugger_data_receiving_server(self):
+    """Starts the HTTP server for receiving health pills at `receive_port`.
+
+    After this method is called, health pills issued to host:receive_port
+    will be stored by this object. Calling this method also creates a file
+    within the log directory for storing health pill summary events.
+    """
+    self.run_server()
 
   def SendTracebacks(self, request, context):
     self._source_manager.add_graph_traceback(request.graph_version,

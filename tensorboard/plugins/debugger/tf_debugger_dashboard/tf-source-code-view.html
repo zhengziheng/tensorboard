@@ -77,10 +77,10 @@ limitations under the License.
         overflow-y: scroll;
       }
       .source-content :hover {
-        background-color: #FFFF00;
+        background-color: #ffffe0;
       }
       .highlighted-source-line {
-        background-color: #FFFFE0;
+        background-color: #ffd6c1;
       }
       .source-line-number {
         display: inline-block;
@@ -200,8 +200,6 @@ limitations under the License.
       // Args:
       //   deviceName: Name of the device that the node is partitioned to.
       //   baseExpandedNodeName: Name of the node, base-expanded if applicable.
-      //   skipSource: Whether focusing on the source file line is to be
-      //     skipped.
       nodeClicked: {
         type: Function,
         value: null,
@@ -222,7 +220,7 @@ limitations under the License.
         value: [],
       },
 
-      _filePathSelected: Number,
+      _filePathSelected: String,
 
       // Full paths to the source files.
       _fullFilePaths: {
@@ -310,6 +308,7 @@ limitations under the License.
         });
         this.set('_shortFilePaths', shortFilePaths);
         if (shortFilePaths.length > 0) {
+          this.set('_filePathSelected', null);
           this.set('_filePathSelected', 0);
         }
       });
@@ -323,7 +322,9 @@ limitations under the License.
     },
 
     _renderFile(selectedId) {
-      if (selectedId == null) return;
+      if (selectedId == null) {
+        return;
+      }
       const filePathSelected = this._shortFilePaths[selectedId].id;
       this._querySourceCodeEndPoint(
           {'mode': 'content', 'file_path': filePathSelected}).then(response => {
@@ -418,9 +419,6 @@ limitations under the License.
               continueToLink.setAttribute('title', 'Continue to');
               // TOOD(cais): Properly style the paper-icon-button.
               continueToLink.addEventListener('tap', () => {
-                this.nodeClicked(
-                    this._nodeName2DeviceName[nodeName],
-                    this._nodeName2BaseExpandedNodeName[nodeName], true);
                 const deviceName = this._nodeName2DeviceName[nodeName];
                 const baseExpandedNodeName = this._nodeName2BaseExpandedNodeName[nodeName];
                 this.set('_setHightlightOriginNodeElement', nodeElement);
@@ -449,7 +447,7 @@ limitations under the License.
             const toggleNodesElement = self.$$('#source-line-node-toggle-' + lineno);
             if (toggleNodesElement.getAttribute('tapCallbackSet') == null) {
               toggleNodesElement.addEventListener('tap', () => {
-                self._toggleLineNodes(Number(lineno));
+                self._toggleLineNodes(lineno);
               });
               toggleNodesElement.setAttribute('tapCallbackSet', true);
             }
@@ -467,16 +465,14 @@ limitations under the License.
       });
     },
 
-    /**
-     * Toggles the expand / collapse state of the nodes of a given source line.
-     * @param {number} lineno 1-based line number.
-     * @param {boolean=} expansionState desired expansion state: `true` for
-     *     expanded and `false` for collapsed. Default is false.
-     */
-    _toggleLineNodes(lineno, expansionState = false) {
+    // Toggle the expand / collapse state of the nodes of a given source line.
+    // Args:
+    //   lineno: 1-based line number.
+    //   expansionState: (Optional) desired expansion state: a Boolean, `true`
+    //     for expanded and `false` for collapsed.
+    _toggleLineNodes(lineno, expansionState) {
       const nodesElement = this.$$('#source-line-nodes-' + lineno);
-      if (nodesElement.getAttribute('hidden') == null &&
-          expansionState !== true) {
+      if (nodesElement.getAttribute('hidden') == null && expansionState !== true) {
         nodesElement.setAttribute('hidden', true);
       } else {
         nodesElement.removeAttribute('hidden');
@@ -516,7 +512,7 @@ limitations under the License.
         linenoToNodeNameAndStackPos[lineno] =
             linenoToNodeNameAndStackPos[lineno].filter(line => {
               const nodeName = line[0];
-              return _.includes(watchedNodeNames, nodeName);
+              return _.contains(watchedNodeNames, nodeName);
             });
       }
     },
@@ -531,7 +527,7 @@ limitations under the License.
     _htmlEscape(string) {
       // TODO(cais): Deal with other charcters that require HTML-escaping, e.g.,
       //   '>', '<'.
-      return string.replace(/ /g, '\u00a0');
+      return string.replace(/ /g, '\u00a0');nodeName
     },
 
     // Focus on a given op: if any lines in the currently active source file
@@ -623,7 +619,7 @@ limitations under the License.
           const fullFilePath = stackFrame[0];
           const lineno = Number(stackFrame[1]);
           frameElement.textContent = fullFilePath + ': ' + String(lineno);
-          if (_.includes(this._fullFilePaths, fullFilePath)) {
+          if (_.contains(this._fullFilePaths, fullFilePath)) {
             frameElement.classList.add('stack-frame-clickable');
             // TODO(cais): Make class CSS work.
             frameElement.style['color'] = 'blue';
