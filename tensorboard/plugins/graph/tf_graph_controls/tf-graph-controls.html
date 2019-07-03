@@ -13,6 +13,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+这个是Graphs页面
 -->
 
 <link rel="import" href="../iron-icon/iron-icon.html">
@@ -89,7 +90,7 @@ table td {
 }
 
 .legend-holder {
-  background: #e9e9e9;
+  background: #f5f8fb;
   border-top: 1px solid #ccc;
   box-sizing: border-box;
   color: #555;
@@ -336,13 +337,18 @@ paper-dropdown-menu {
   </div>
   <div class="control-holder">
     <paper-button class="icon-button" on-click="fit" alt="Fit to screen">
-      <iron-icon icon="aspect-ratio" class="button-icon"></iron-icon>
+      <!-- <iron-icon icon="aspect-ratio" class="button-icon"></iron-icon> -->
+      <span class="aios-icon-wrapper">
+        <svg class="aios-icon" id="适应屏幕" data-name="图层 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><title>适应屏幕</title><path d="M186,14V186H14V14H186M200,0H0V200H200V0Z"/><path d="M164.75,165h-63.1V150.21H150V101.89h14.78ZM49.53,49.77H97.85V35H34.75v63.1H49.53Z"/></svg>
+      </span>
       <span class="button-text">Fit to Screen</span>
     </paper-button>
   </div>
   <div class="control-holder">
     <paper-button class="icon-button" on-click="download" alt="Download PNG">
-      <iron-icon icon="file-download" class="button-icon"></iron-icon>
+      <span class="aios-icon-wrapper">
+        <svg class="aios-icon" id="下载" data-name="图层 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><title>画板 11te</title><path d="M100,140.76a14.41,14.41,0,0,1-10.21-4.21L46.05,92.83A7.55,7.55,0,0,1,56.73,82.17l35.72,35.74V7.54a7.54,7.54,0,0,1,15.08,0V117.91L143.2,82.24A7.54,7.54,0,1,1,153.87,92.9l-43.63,43.64A14.36,14.36,0,0,1,100,140.76ZM0,80v84.72A35.39,35.39,0,0,0,35.28,200H164.71A35.39,35.39,0,0,0,200,164.72V80H184.91V164.7a20.24,20.24,0,0,1-20.19,20.19H35.28a20.22,20.22,0,0,1-20.2-20.19V79.83Z"/></svg>
+      </span>
       <span class="button-text">Download PNG</span>
     </paper-button>
     <a href="#" id="graphdownload" class="title" download="graph.png"></a>
@@ -375,7 +381,7 @@ paper-dropdown-menu {
       <paper-button raised class="upload-button"
           on-click="_getFile"
           title="Upload a graph pbtxt file to view the graph">
-        Choose File
+          Choose File
       </paper-button>
       <div class="hidden-input">
         <input
@@ -424,7 +430,7 @@ paper-dropdown-menu {
       <paper-radio-button id="xla-cluster-radio-button"
                           name="xla_cluster"
                           disabled="[[!_xlaClustersProvided(renderHierarchy)]]">
-        XLA Cluster
+                          XLA Cluster
       </paper-radio-button>
       <paper-tooltip animation-delay="0" for="xla-cluster-radio-button" position="right" offset="0">
         Coloring by XLA cluster is only enabled if at least 1 op specifies an XLA cluster.
@@ -433,7 +439,7 @@ paper-dropdown-menu {
       <paper-radio-button id="compute-time-radio-button"
                           name="compute_time"
                           disabled="[[!stats]]">
-        Compute time
+                          Compute time
       </paper-radio-button>
       <paper-tooltip animation-delay="0" for="compute-time-radio-button" position="right" offset="0">
         Coloring by compute time is only enabled if the RunMetadata proto is passed to the
@@ -443,7 +449,7 @@ paper-dropdown-menu {
       <paper-radio-button id="memory-radio-button"
                           name="memory"
                           disabled="[[!stats]]">
-        Memory
+                          Memory
       </paper-radio-button>
       <paper-tooltip animation-delay="0" for="memory-radio-button" position="right" offset="0">
         Coloring by memory is only enabled if the RunMetadata proto is passed to the
@@ -452,7 +458,7 @@ paper-dropdown-menu {
 
       <paper-radio-button id="tpu-compatibility-radio-button"
                           name="op_compatibility">
-        TPU Compatibility
+                          TPU Compatibility
       </paper-radio-button>
       <paper-tooltip animation-delay="0" for="tpu-compatibility-radio-button" position="right" offset="0">
         Coloring by whether an operation is compatible for the TPU device.

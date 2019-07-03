@@ -58,8 +58,8 @@ export const palettes = {
   // A colorblind-friendly palette designed for TensorBoard by Paul Tol
   // (https://personal.sron.nl/~pault/).
   tensorboardColorBlindAssist: [
-    '#ff7043',  // orange
-    '#0077bb',  // blue
+    '#ff910c',  // orange
+    '#286bff',  // blue
     '#cc3311',  // red
     '#33bbee',  // cyan
     '#ee3377',  // magenta

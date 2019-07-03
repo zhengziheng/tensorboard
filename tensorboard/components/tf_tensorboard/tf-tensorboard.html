@@ -58,7 +58,7 @@ limitations under the License.
     <paper-header-panel>
       <paper-toolbar id="toolbar" slot="header">
         <div id="toolbar-content" slot="top">
-          <div class="toolbar-title">[[brand]]</div>
+          <div class="toolbar-title">AIOS</div>
           <template is="dom-if" if="[[_activeDashboardsNotLoaded]]">
             <span class="toolbar-message">
               Loading active dashboards&hellip;
@@ -643,13 +643,14 @@ limitations under the License.
        */
       _isDashboardInactive(
           disabledDashboards, activeDashboards, dashboardDatum) {
-        if ((disabledDashboards || '').split(',').indexOf(
-            dashboardDatum.plugin) >= 0) {
-          // Disabled dashboards don't appear at all; they're not just
-          // inactive.
-          return false;
-        }
-        if (!(activeDashboards || []).includes(dashboardDatum.plugin)) {
+        // if ((disabledDashboards || '').split(',').indexOf(
+        //     dashboardDatum.plugin) >= 0) {
+        //   // Disabled dashboards don't appear at all; they're not just
+        //   // inactive.
+        //   return false;
+        // }
+        let usefulList = ['images','distributions','histograms','custom_scalars','scalars']
+        if (usefulList.includes(dashboardDatum.plugin)) {
           // Inactive.
           return true;
         }
@@ -871,7 +872,16 @@ limitations under the License.
       },
 
       _computeActiveDashboard() {
-        return this._dashboardData
+        // let usefulList = ['images','distributions','histograms','custom_scalars','scalars']
+        // let temp = {}
+        //   for (const key in this._pluginsListing) {
+        //     for (const item of usefulList) {
+        //       if (key===item) {
+        //         temp[key] = this._pluginsListing[key];
+        //       }
+        //     }
+        //   }
+        let result =  this._dashboardData
             .map((d) => d.plugin)
             .filter((dashboardName) => {
                 // TODO(stephanwlee): Remove boolean code path when releasing
@@ -881,9 +891,11 @@ limitations under the License.
                 // enabled. This is deprecated but we will maintain backwards
                 // compatibility for some time.
                 const maybeMetadata = this._pluginsListing[dashboardName];
+                console.log(this._pluginsListing[dashboardName])
                 if (typeof maybeMetadata === 'boolean') return maybeMetadata;
                 return maybeMetadata && maybeMetadata.enabled;
             });
+            return result
       },
 
       /**
@@ -972,6 +984,7 @@ limitations under the License.
       },
 
       _computeDashboardData(dashboardRegistry) {
+        console.log(dashboardRegistry)
         return Object.values(dashboardRegistry);
       },
 
@@ -982,6 +995,7 @@ limitations under the License.
             return;
           }
           this._pluginsListing = result.value;
+          console.log(this._pluginsListing)
           this._activeDashboardsLoadState = tf_tensorboard.ActiveDashboardsLoadState.LOADED;
         });
         const onFailure = () => {
